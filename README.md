@@ -1,5 +1,16 @@
-# housing_cost
-The goal is to create a housing cost forecasting model for a real estate agency
+# Housing forecasting model for real estate agencies (housing_cost)
+
+Real estate agency faced with a problem - realtors spend too much time sorting ads and search for profitable offers. 
+Therefore, the speed of their reaction and the quality of analysis are not up to the level of competitors. 
+This affects the financial performance of the agency.
+
+The goal is to develop a machine learning model that will help process ads and increase the number of deals and agency profits.
+
+**In Russian:**
+
+Задача следующая: агентство недвижимости столкнулось с проблемой — риелторы тратят слишком много времени на сортировку объявлений и поиск выгодных предложений. Поэтому скорость их реакции и качество анализа не дотягивают до уровня конкурентов. Это сказывается на финансовых показателях агентства.
+
+Ваша цель — разработать модель машинного обучения, которая поможет обрабатывать объявления и увеличит число сделок и прибыль агентства.
 
 # Directory structure
 
