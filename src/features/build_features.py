@@ -107,18 +107,60 @@ def get_max(value):
 
 
 def get_df_with_numerical_story(df:pd.DataFrame):
+    """ Fill numerical story data and replace to numbers values in stories
+
+    Args:
+        df (pd.DataFrame): Dataframe to change
+
+    Returns:
+        pd.DataFrame: Corrected DF
+    """
     df_copy = df.copy()
+    df_copy['stories'] = df_copy['stories'].str.lower().str.strip()
     df_copy['stories'] = replace_to_numbers(df_copy['stories'])
     
     df_copy['stories_num'] = None
-    
+    # Retrieve nums from stories
     series_with_nums = df_copy['stories'].str.findall(r'[0-9]+[\.]{0,1}[0-9]*')
-    
     df_copy['stories_num'] = pd.to_numeric(
         series_with_nums.apply(get_max)
     )
     df_copy.loc[df_copy['stories_num'] == 0, 'stories_num'] = None
+    # Lands has no stories
+    lot_mask = (
+        df_copy['stories'].isin(['lot', 'acreage']) &
+        df_copy['stories_num'].isna()
+    )
+    df_copy.loc[lot_mask, 'stories_num'] = 0
     
-    # TODO: continue
+    ranch_mask = (
+        df_copy['stories'].isin(['ranch', 'traditional']) &
+        df_copy['stories_num'].isna()
+    )
+    df_copy.loc[ranch_mask, 'stories_num'] = 1
+    
+    # Let us assume, that split houses has more than 1 story
+    split_mask = (
+        (
+            df['stories'].str.contains('multi', na=False) |
+            df['stories'].str.contains('split', na=False) |
+            df['stories'].str.contains('tri', na=False) |
+            df['stories'].str.contains('stories/levels', na=False)
+        ) &
+        df_copy['stories_num'].isna()
+    )
+    df_copy.loc[split_mask, 'stories_num'] = 1.5
+    
+    townhouse_mask = (
+        df_copy['stories'].isin(['townhouse', 'bi-level']) &
+        df_copy['stories_num'].isna()
+    )
+    df_copy.loc[townhouse_mask, 'stories_num'] = 2
+    
+    condominium_mask = (
+        df_copy['stories'].isin(['condominium', 'mid-rise']) &
+        df_copy['stories_num'].isna()
+    )
+    df_copy.loc[condominium_mask, 'stories_num'] = 3
     
     return df_copy
