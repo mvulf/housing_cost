@@ -1,5 +1,28 @@
 import pandas as pd
 
+def replace(
+    series:pd.Series, 
+    replace_map:tuple,
+)->pd.Series:
+    """Replace by replace_map
+
+    Args:
+        stories: Series with stories
+        replace_map: tuple(str, str)
+
+    Returns:
+        Series with numbered replacement (stories by default)
+    """
+    series = series.str.lower()
+    
+    for to_replace in replace_map:
+        series = series.str.replace(
+            *to_replace
+        )
+    
+    return series
+
+
 def get_numerical_target(target:pd.Series):
     """Get numerical feature from raw dataset. Can contain only "$", "+", "," to drop.
 
@@ -10,9 +33,14 @@ def get_numerical_target(target:pd.Series):
         Transformed Series
     """
     if target.dtype == 'O':
-        target = target.str.replace('$', '')
-        target = target.str.replace('+', '')
-        target = target.str.replace(',', '')
+        target = replace(
+            target,
+            replace_map=(
+                ('$', ''),
+                ('+', ''),
+                (',', '')
+            )
+        )
         return pd.to_numeric(target)
     return target
 
@@ -63,30 +91,31 @@ def get_df_with_numerical_sqft(df:pd.DataFrame):
 
 #STORIES
 
-def replace_to_numbers(stories:pd.Series):
-    """Replace stories series to numbers
+# def replace_to_numbers(
+#     series:pd.Series, 
+#     replace_map=(
+#         ('ground', '1'),
+#         ('one', '1'),
+#         ('two', '2'),
+#         ('three', '3'),
+#     )
+# ):
+#     """Replace series to numbers (stories by default)
 
-    Args:
-        stories: Series with stories
+#     Args:
+#         stories: Series with stories
 
-    Returns:
-        Series with numbered stories replacement
-    """
-    stories = stories.str.lower()
-    # replace
-    replace_dt = {
-        'ground': '1',
-        'one': '1',
-        'two': '2',
-        'three': '3',
-    }
+#     Returns:
+#         Series with numbered replacement (stories by default)
+#     """
+#     series = series.str.lower()
     
-    for word in replace_dt:
-        stories = stories.str.replace(
-            word, replace_dt[word]
-        )
+#     for replace in replace_map:
+#         series = series.str.replace(
+#             *replace
+#         )
     
-    return stories
+#     return series
 
 
 def get_max(value):
@@ -117,7 +146,15 @@ def get_df_with_numerical_story(df:pd.DataFrame):
     """
     df_copy = df.copy()
     df_copy['stories'] = df_copy['stories'].str.lower().str.strip()
-    df_copy['stories'] = replace_to_numbers(df_copy['stories'])
+    df_copy['stories'] = replace(
+        df_copy['stories'],
+        replace_map=(
+            ('ground', '1'),
+            ('one', '1'),
+            ('two', '2'),
+            ('three', '3'),
+        )
+    )
     
     df_copy['stories_num'] = None
     # Retrieve nums from stories
@@ -164,3 +201,7 @@ def get_df_with_numerical_story(df:pd.DataFrame):
     df_copy.loc[condominium_mask, 'stories_num'] = 3
     
     return df_copy
+
+
+# BATHS and BEDS
+
