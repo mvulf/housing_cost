@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 
+num_regex = r'[0-9]+\.{0,1}[0-9]*'
 
 def get_max(value):
     """Get maximum value in the case of list and just value, if it single
@@ -21,22 +22,25 @@ def get_max(value):
 
 def replace(
     series:pd.Series, 
-    replace_map:tuple,
+    to_replace:tuple,
 )->pd.Series:
-    """Replace by replace_map
+    """Replace by to_replace
 
     Args:
         stories: Series with stories
-        replace_map: tuple(str, str)
+        to_replace: tuple(str, str)
 
     Returns:
         Series with numbered replacement (stories by default)
     """
-    series = series.str.lower()
+    series = (
+        series.str.lower()
+        .str.strip()
+    )
     
-    for to_replace in replace_map:
+    for item in to_replace:
         series = series.str.replace(
-            *to_replace
+            *item
         )
     
     return series
@@ -74,7 +78,7 @@ def get_numerical_target(target:pd.Series):
     if target.dtype == 'O':
         target = replace(
             target,
-            replace_map=(
+            to_replace=(
                 ('$', ''),
                 ('+', ''),
                 (',', '')
@@ -143,7 +147,7 @@ def get_df_with_numerical_story(df:pd.DataFrame):
     df_copy['stories'] = df_copy['stories'].str.lower().str.strip()
     df_copy['stories'] = replace(
         df_copy['stories'],
-        replace_map=(
+        to_replace=(
             ('ground', '1'),
             ('one', '1'),
             ('two', '2'),
@@ -153,7 +157,7 @@ def get_df_with_numerical_story(df:pd.DataFrame):
     
     df_copy['stories_num'] = None
     # Retrieve nums from stories
-    series_with_nums = df_copy['stories'].str.findall(r'[0-9]+[\.]{0,1}[0-9]*')
+    series_with_nums = df_copy['stories'].str.findall(num_regex)
     df_copy['stories_num'] = pd.to_numeric(
         series_with_nums.apply(get_max)
     )
@@ -200,3 +204,42 @@ def get_df_with_numerical_story(df:pd.DataFrame):
 
 # BATHS and BEDS
 
+def get_numerical_feature(
+    series:pd.Series,
+    to_none:tuple=(),
+    to_replace:tuple=(),
+)->pd.Series:
+    """Get numerical values if they are not ambiguous. Before - refine series
+
+    Args:
+        series: series to get numerical feature
+        to_none: tuple to get none value. Defaults to ().
+        to_replace: tuple to replace. Defaults to ().
+
+    Returns:
+        _description_
+    """
+    series = series.copy()
+    
+    if series.dtype == 'O':
+        series = convert_to_none(series, to_none)
+        series = replace(series, to_replace)
+        
+        nums = series.str.findall(num_regex)
+        nums = nums.apply(lambda x: x if isinstance(x, list) else [])
+        
+        nums = nums.apply(lambda x: x[0] if len(x) == 1 else None)
+        
+        return pd.to_numeric(nums)
+    
+    return series
+
+
+def get_beds_from_baths(
+    df
+):
+    df = df.copy()
+    df.loc[df['beds'] == 'Baths', 'beds'] =\
+        df.loc[df['beds'] == 'Baths', 'baths'].apply(str)
+    
+    return df
