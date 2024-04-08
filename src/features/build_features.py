@@ -1,4 +1,23 @@
 import pandas as pd
+import numpy as np
+
+
+def get_max(value):
+    """Get maximum value in the case of list and just value, if it single
+
+    Args:
+        value: list or scalar
+
+    Returns:
+        scalar (max in the case of list)
+    """
+    if isinstance(value, list):
+        if len(value) > 0:
+            return max(value)
+        else:
+            return None
+    return value
+
 
 def replace(
     series:pd.Series, 
@@ -19,6 +38,26 @@ def replace(
         series = series.str.replace(
             *to_replace
         )
+    
+    return series
+
+
+def convert_to_none(
+    series:pd.Series,
+    to_none:tuple,
+    
+):
+    series = series.copy()
+    series = (
+        series.str.lower()
+        .str.strip()
+    )
+    
+    for sub_str in to_none:
+        if len(sub_str) == 0:
+            series = series.replace(r'^s*$', np.nan, regex=True)
+        else:
+            series.loc[series.str.contains(sub_str, na=False, regex=True)] = None
     
     return series
 
@@ -90,50 +129,6 @@ def get_df_with_numerical_sqft(df:pd.DataFrame):
 
 
 #STORIES
-
-# def replace_to_numbers(
-#     series:pd.Series, 
-#     replace_map=(
-#         ('ground', '1'),
-#         ('one', '1'),
-#         ('two', '2'),
-#         ('three', '3'),
-#     )
-# ):
-#     """Replace series to numbers (stories by default)
-
-#     Args:
-#         stories: Series with stories
-
-#     Returns:
-#         Series with numbered replacement (stories by default)
-#     """
-#     series = series.str.lower()
-    
-#     for replace in replace_map:
-#         series = series.str.replace(
-#             *replace
-#         )
-    
-#     return series
-
-
-def get_max(value):
-    """Get maximum value in the case of list and just value, if it single
-
-    Args:
-        value: list or scalar
-
-    Returns:
-        scalar (max in the case of list)
-    """
-    if isinstance(value, list):
-        if len(value) > 0:
-            return max(value)
-        else:
-            return None
-    return value
-
 
 def get_df_with_numerical_story(df:pd.DataFrame):
     """ Fill numerical story data and replace to numbers values in stories
