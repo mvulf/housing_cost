@@ -41,7 +41,7 @@ def plot_boxplot(
         x_label, y_label = numeric_label, categorical_label
     elif orient == 'v':
         y, x = numeric_feature, categorical_feature
-        y_label, x_label = categorical_label, numeric_label
+        y_label, x_label = numeric_label, categorical_label
         
     ax = sns.boxplot(
         data=data,
