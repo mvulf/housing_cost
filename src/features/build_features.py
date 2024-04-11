@@ -49,6 +49,7 @@ def replace(
 def convert_to_none(
     series:pd.Series,
     to_none:tuple,
+    contains:bool=True,
     
 )->pd.Series:
     """If series contains sub-strings from "to_none" - explicitly set None
@@ -56,9 +57,11 @@ def convert_to_none(
     Args:
         series: Series to get Nones
         to_none: Tuple of sub-strings to mark rows as Nones
+        contains: if True - check that series contains string. 
+        Compare to full string if False
 
     Returns:
-        Series with Nones instead of sub-string from "to_none"
+        Series with Nones instead of sub-string (or whole string) from "to_none"
     """
     series = series.copy()
     series = (
@@ -70,9 +73,14 @@ def convert_to_none(
         if len(sub_str) == 0:
             series = series.replace(r'^s*$', np.nan, regex=True)
         else:
-            series.loc[
-                series.str.contains(sub_str, na=False, regex=True)
-            ] = np.nan
+            if contains:
+                series.loc[
+                    series.str.contains(sub_str, na=False, regex=True)
+                ] = np.nan
+            else:
+                series.loc[
+                    series == sub_str
+                ] = np.nan
     
     return series
 
@@ -102,7 +110,7 @@ def get_numerical_target(target:pd.Series)->pd.Series:
 
 # SQFT
 
-def get_df_with_numerical_sqft(df:pd.DataFrame)->pd.DataFrame:
+def get_df_numerical_sqft(df:pd.DataFrame)->pd.DataFrame:
     """Mark rows with explicitly checked interior area.
     Make Nones for missing sqft.
     Get numerical sqft
@@ -145,7 +153,7 @@ def get_df_with_numerical_sqft(df:pd.DataFrame)->pd.DataFrame:
 
 #STORIES
 
-def get_df_with_numerical_story(df:pd.DataFrame)->pd.DataFrame:
+def get_df_numerical_story(df:pd.DataFrame)->pd.DataFrame:
     """ Fill numerical story data and replace to numbers values in stories
 
     Args:
@@ -235,7 +243,7 @@ def get_numerical_feature(
         to_replace: tuple to replace. Defaults to ().
 
     Returns:
-        _description_
+        Series with numerical type
     """
     series = series.copy()
     
@@ -296,9 +304,37 @@ def get_df_private_pool(df:pd.DataFrame)->pd.DataFrame:
         df = df.drop(['private pool', 'PrivatePool'], axis=1)
     return df
 
+
+# Fireplace
+
+def get_bool_feature(
+    series:pd.Series,
+    to_none:tuple=(),    
+)->pd.Series:
+    """Create bool feature by None - False
+
+    Args:
+        series: series to get numerical feature
+        to_none: tuple to get none value. Defaults to ().
+
+    Returns:
+        Series with boolean type
+    """
+    
+    series = series.copy()
+    
+    if series.dtype == 'O':
+        # Convert to none 
+        series = convert_to_none(series, to_none, contains=False)
+        # True, if values are keeped
+        series = series.notna()
+    
+    return series
+
+
 # MLS
 
-def get_df_with_mls(df:pd.DataFrame)->pd.DataFrame:
+def get_df_mls(df:pd.DataFrame)->pd.DataFrame:
     """Get "mls" which is True, when any information exists, and False, 
     when None or implicit None
 
