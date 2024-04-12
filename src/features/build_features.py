@@ -379,14 +379,57 @@ def get_df_mls(df:pd.DataFrame)->pd.DataFrame:
     return df
 
 
+def get_categorical_feature(
+    series:pd.Series,
+    isin_dict:dict=None,
+    mask_dict:dict=None,
+)->pd.Series:
+    """Get categorical grouped categorical features according to dicts.
+
+    Args:
+        series: Source series
+        isin_dict: Dict which keys - new values, and values are lists of 
+        old values. They are used to check that value isin the list. 
+        Defaults to None.
+        mask_dict: Dict which keys - new values, and values are mask to which 
+        necessary to apply new values. Defaults to None.
+
+    Returns:
+        Series with new groups
+    """
+    
+    series = series.str.strip().str.lower()
+    
+    new_series = series.copy()
+    new_series.loc[:] = np.nan
+    # Prepare group values
+    if isinstance(isin_dict, dict):
+        for new_value, old_values in isin_dict.items():
+            new_series.loc[series.isin(old_values)] = new_value
+    # Fill by masks:
+    if isinstance(mask_dict, dict):
+        for new_value, mask in mask_dict.items():
+            new_series.loc[mask] = new_value
+    
+    return new_series
+    
+
 # STATUS
 
 def get_status_feature(status:pd.Series)->pd.Series:
+    """ Prepare isin- and mask- dicts to set them to get_categorical_feature
+
+    Args:
+        status: Series for update
+
+    Returns:
+        Series with updated categories
+    """
 
 
     status = status.str.strip().str.lower()
     
-    status_dict = {
+    isin_status_dict = {
         'sale': ['for sale'],
         'active': ['active', 'a active'],
     }
@@ -444,13 +487,10 @@ def get_status_feature(status:pd.Series)->pd.Series:
         'new': new_mask,
     }
     
-    new_status = status.copy()
-    new_status.loc[:] = np.nan
-    # Prepare group values
-    for new_value, old_values in status_dict.items():
-        new_status.loc[status.isin(old_values)] = new_value
-    # Fill by masks:
-    for new_value, mask in mask_status_dict.items():
-        new_status.loc[mask] = new_value
+    new_status = get_categorical_feature(
+        status,
+        isin_dict=isin_status_dict,
+        mask_dict=mask_status_dict,
+    )
     
     return new_status
