@@ -13,6 +13,8 @@ def plot_boxplot(
     categorical_label:str=None,
     title:str=None,
     orient:str='h',
+    figsize:tuple=(),
+    ordered:bool=False,
 ):
     """Plot boxplot
 
@@ -22,10 +24,12 @@ def plot_boxplot(
         categorical_feature: if several categories necessary to analyse (optional). Defaults to None.
         hue_feature: if color labeling is required (optional). Defaults to None.
         log_scale: scale for numeric-axis. Defaults to False.
-        numeric_label: Special label for numeric axis, if required. Defaults to None.
-        categorical_label: Special label for categorical axis, if required. Defaults to None.
-        title: Plot title. Defaults to None.
-        orient: Boxplots orientation. Defaults to 'h'.
+        numeric_label: special label for numeric axis, if required. Defaults to None.
+        categorical_label: special label for categorical axis, if required. Defaults to None.
+        title: plot title. Defaults to None.
+        orient: boxplots orientation. Defaults to 'h'.
+        figsize: size of the figure. Defaults to None.
+        ordered: Order by numerical value. Defaults to None.
 
     Raises:
         ValueError: If orientation differ from ['h', 'v']
@@ -42,6 +46,13 @@ def plot_boxplot(
     elif orient == 'v':
         y, x = numeric_feature, categorical_feature
         y_label, x_label = numeric_label, categorical_label
+    
+    order = None
+    if ordered:
+        order = (
+            data.groupby(categorical_feature)[numeric_feature]
+            .median().sort_values().index
+        )
         
     ax = sns.boxplot(
         data=data,
@@ -49,6 +60,7 @@ def plot_boxplot(
         y=y,
         hue=hue_feature,
         log_scale=log_scale,
+        order=order
     )
     if x_label:
         ax.set_xlabel(x_label)
@@ -56,8 +68,12 @@ def plot_boxplot(
         ax.set_ylabel(y_label)
 
     ax.set_title(title)
+    fig = ax.get_figure()
     
-    return ax.get_figure()
+    if len(figsize) == 2:
+        fig.set_size_inches(*figsize)
+    
+    return fig
 
 
 def plot_box_hist_plot(

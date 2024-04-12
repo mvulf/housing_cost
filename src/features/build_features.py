@@ -377,3 +377,80 @@ def get_df_mls(df:pd.DataFrame)->pd.DataFrame:
         df = df.drop(['mls-id', 'MlsId'], axis=1)
         
     return df
+
+
+# STATUS
+
+def get_status_feature(status:pd.Series)->pd.Series:
+
+
+    status = status.str.strip().str.lower()
+    
+    status_dict = {
+        'sale': ['for sale'],
+        'active': ['active', 'a active'],
+    }
+    
+    foreclosure_mask = (
+        status.str.contains('foreclos', na=False) & 
+        ~status.str.contains('pre', na=False)
+    )
+    
+    pre_foreclosure_mask = (
+        status.str.contains('foreclos', na=False) & 
+        status.str.contains('pre', na=False)
+    )
+    
+    under_contract_mask = (
+        status.str.contains('under contract', na=False) &
+        ~status.str.contains('backup', na=False)
+    )
+    
+    backup_mask = (
+        status.str.contains('backup', na=False)
+    )
+    
+    contingency_mask = (
+        status.str.contains('contingen', na=False)
+    )
+    
+    # Let us consider "p" as pending: https://support.mlslistings.com/s/article/Status-Definitions 
+    pending_mask = (
+        (
+            status.str.contains('pending', na=False) |
+            (status == 'p')
+        ) &
+        ~backup_mask &
+        ~contingency_mask
+    )
+    
+    auction_mask = (
+        status.str.contains('auction', na=False) &
+        ~pre_foreclosure_mask
+    )
+    
+    new_mask = (
+        status.str.contains('new', na=False)
+    )
+    
+    mask_status_dict = {
+        'foreclosure': foreclosure_mask,
+        'pre-foreclosure': pre_foreclosure_mask,
+        'under_contract': under_contract_mask,
+        'backup': backup_mask,
+        'contingency': contingency_mask,
+        'pending': pending_mask,
+        'auction': auction_mask,
+        'new': new_mask,
+    }
+    
+    new_status = status.copy()
+    new_status.loc[:] = np.nan
+    # Prepare group values
+    for new_value, old_values in status_dict.items():
+        new_status.loc[status.isin(old_values)] = new_value
+    # Fill by masks:
+    for new_value, mask in mask_status_dict.items():
+        new_status.loc[mask] = new_value
+    
+    return new_status
