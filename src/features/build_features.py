@@ -333,7 +333,6 @@ def get_bool_feature(
 
 
 # MLS
-
 def get_df_mls(df:pd.DataFrame)->pd.DataFrame:
     """Get "mls" which is True, when any information exists, and False, 
     when None or implicit None
@@ -425,8 +424,6 @@ def get_status_feature(status:pd.Series)->pd.Series:
     Returns:
         Series with updated categories
     """
-
-
     status = status.str.strip().str.lower()
     
     isin_status_dict = {
@@ -494,3 +491,288 @@ def get_status_feature(status:pd.Series)->pd.Series:
     )
     
     return new_status
+
+
+def get_df_type(df:pd.DataFrame)->pd.DataFrame:
+    
+    if 'propertyType' in df.columns:
+        df = df.copy()
+        df['propertyType'] = df['propertyType'].str.lower().str.strip()
+        property_type = df['propertyType']
+        
+        # FILL TYPES
+        land_mask = (
+            property_type.isin(['lot/land', 'land'])
+        )
+        
+        mobile_mask = (
+            property_type.str.contains('manufactured', na=False) |
+            property_type.str.contains('mobile', na=False) |
+            property_type.str.contains(r'mo2\S*le', regex=True, na=False) |
+            property_type.str.contains('prefab', na=False) |
+            property_type.str.contains('modular', na=False)
+        )
+        
+        ranch_mask = (
+            (
+                property_type.str.contains('ranch', na=False) |
+                property_type.str.contains('bungalow', na=False) |
+                property_type.str.contains('cabin', na=False) |
+                property_type.str.contains(r'ca2\S*n', na=False) |
+                property_type.str.contains(r'cottage', na=False) |
+                property_type.str.contains(r'farm', na=False) |
+                property_type.str.contains(r'garden home', na=False)
+            ) &
+            ~mobile_mask
+        )
+        
+        single_mask = (
+            (
+                property_type.str.contains('single', na=False) |
+                property_type.str.contains('detached', na=False) |
+                property_type.str.contains('split', na=False) |
+                property_type.str.contains('multi-level', na=False) |
+                property_type.str.contains(r'low[-\s]*rise', na=False)
+            ) &
+            ~property_type.str.contains('condominium', na=False) &
+            ~ranch_mask &
+            ~mobile_mask
+        )
+        
+        multi_mask = (
+            (
+                property_type.str.contains(
+                    r'multi[-\s]+family', regex=True, na=False
+                ) |
+                property_type.str.contains(r'mid[-\s]*rise', na=False) |
+                property_type.str.contains(r'high[-\s]*rise', na=False)
+            ) &
+            ~property_type.str.contains('condominium', na=False) &
+            ~ranch_mask &
+            ~mobile_mask &
+            ~single_mask
+        )
+        
+        town_mask = (
+            property_type.str.contains('town', na=False)
+        )
+        
+        condo_mask = (
+            (
+                property_type.str.contains(r'co-*op', regex=True, na=False) |
+                property_type.str.contains('condo', na=False)
+            ) &
+            ~town_mask
+        )
+        
+        apt_mask = (
+            property_type.str.contains('apart', na=False) &
+            ~town_mask &
+            ~condo_mask &
+            ~ranch_mask
+        )
+        
+        mask_type_dict = {
+            'land': land_mask,
+            'mobile': mobile_mask,
+            'ranch': ranch_mask,
+            'single': single_mask,
+            'multi': multi_mask,
+            'town': town_mask,
+            'condo': condo_mask,
+            'apt': apt_mask,
+        }
+        
+        new_property_type = get_categorical_feature(
+            property_type,
+            mask_dict=mask_type_dict,
+        )
+        df['property_type'] = new_property_type
+        
+        # FILL STYLES, if is empty
+        modern_mask = (
+            (
+                (
+                    property_type.str.contains(r'modern', na=False) |
+                    property_type.str.contains('contemp', na=False)
+                ) &
+                ~property_type.str.contains(r'mid[-\s]*century', na=False)
+            ) &
+            df['property_type'].isna()
+        )
+        
+        traditional_mask = (
+            (
+                property_type.str.contains('traditional', na=False) |
+                property_type.str.contains(r'mid[-\s]*century', na=False)
+            ) &
+            ~modern_mask &
+            df['property_type'].isna()
+        )
+        
+        colonial_mask = (
+            property_type.str.contains('colonial', na=False) &
+            ~modern_mask &
+            ~traditional_mask &
+            df['property_type'].isna()
+        )
+        
+        spanish_mask = (
+            (
+                property_type.str.contains('mediterranean', na=False) |
+                property_type.str.contains('spanish', na=False)
+            ) &
+            ~modern_mask &
+            ~traditional_mask &
+            ~colonial_mask &
+            df['property_type'].isna()
+        )
+        
+        florida_mask = (
+            (
+                property_type.str.contains('florida', na=False)
+            ) &
+            ~modern_mask &
+            ~traditional_mask &
+            ~colonial_mask &
+            ~spanish_mask &
+            df['property_type'].isna()
+        )
+        
+        transitional_mask = (
+            (
+                property_type.str.contains('transitional', na=False)
+            ) &
+            ~modern_mask &
+            ~traditional_mask &
+            ~colonial_mask &
+            ~spanish_mask &
+            ~florida_mask &
+            df['property_type'].isna()
+        )
+        
+        europe_mask = (
+            (
+                property_type.str.contains('victorian', na=False) |
+                property_type.str.contains('queen', na=False) |
+                property_type.str.contains('european', na=False) |
+                property_type.str.contains('tudor', na=False) |
+                property_type.str.contains('french', na=False)
+            ) &
+            ~modern_mask &
+            ~traditional_mask &
+            ~colonial_mask &
+            ~spanish_mask &
+            ~florida_mask &
+            ~transitional_mask &
+            df['property_type'].isna()
+        )
+        
+        cape_mask = (
+            (
+                property_type.str.contains('cape', na=False)
+            ) &
+            ~modern_mask &
+            ~traditional_mask &
+            ~colonial_mask &
+            ~spanish_mask &
+            ~florida_mask &
+            ~transitional_mask &
+            ~europe_mask &
+            df['property_type'].isna()
+        )
+        
+        log_mask = (
+            (
+                property_type.str.contains('craftsman', na=False) |
+                property_type.str.contains('log', na=False)
+            ) &
+            ~modern_mask &
+            ~traditional_mask &
+            ~colonial_mask &
+            ~spanish_mask &
+            ~florida_mask &
+            ~transitional_mask &
+            ~europe_mask &
+            ~cape_mask &
+            df['property_type'].isna()
+        )
+        
+        mask_style_dict = {
+            'modern': modern_mask,
+            'traditional': traditional_mask,
+            'colonial': colonial_mask,
+            'spanish': spanish_mask,
+            'florida': florida_mask,
+            'transitional': transitional_mask,
+            'europe': europe_mask,
+            'cape': cape_mask,
+            'log': log_mask,
+        }
+        
+        new_property_type = get_categorical_feature(
+            property_type,
+            mask_dict=mask_style_dict,
+        )
+        df.loc[df['property_type'].isna(), 'property_type'] = new_property_type
+        
+        # FILL STORIES by values from propertyType
+        property_type = replace(
+            property_type,
+            to_replace=(
+                ('ground', '1'),
+                ('one', '1'),
+                ('single', '1'),
+                ('multi', '1.5'),
+                ('split', '1.5'),
+                ('tri', '1.5'),
+                ('two', '2'),
+                ('bi', '2'),
+                ('three', '3'),
+            )
+        )
+        
+        stor_property_type = property_type[
+            (
+                property_type.str.contains('stor', na=False) |
+                property_type.str.contains('level', na=False)
+            ) &
+            df['stories'].isna()
+        ]
+        
+        series_with_nums = stor_property_type.str.findall(num_regex)
+
+        df.loc[df['stories'].isna(), 'stories'] = pd.to_numeric(
+            series_with_nums.apply(get_max)
+        )
+        
+        # Drop old columns
+        df = df.drop(['propertyType'], axis=1)
+    
+    return df
+
+
+def get_street_feature(
+    street:pd.Series,   
+)->pd.Series:
+    """Create street feature with true Nones
+
+    Args:
+        series: street series origin
+
+    Returns:
+        Series with real Nans
+    """
+    
+    to_none = (
+        'disclosed',
+        'available',
+        'unknown',
+    )
+    
+    street = street.copy()
+
+    street_with_nans = convert_to_none(street, to_none, contains=True)
+    street.loc[street_with_nans.isna()] = np.nan
+    
+    return street
