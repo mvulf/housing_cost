@@ -23,20 +23,23 @@ def get_max(value):
 def replace(
     series:pd.Series, 
     to_replace:tuple,
+    lower_strip:bool=True,
 )->pd.Series:
     """Replace by to_replace
 
     Args:
         stories: Series with stories
         to_replace: tuple(str, str)
+        lower_strip: if True, make lower and strip
 
     Returns:
         Series with numbered replacement (stories by default)
     """
-    series = (
-        series.str.lower()
-        .str.strip()
-    )
+    if lower_strip:
+        series = (
+            series.str.lower()
+            .str.strip()
+        )
     
     for item in to_replace:
         series = series.str.replace(
@@ -50,6 +53,7 @@ def convert_to_none(
     series:pd.Series,
     to_none:tuple,
     contains:bool=True,
+    lower_strip:bool=True,
     
 )->pd.Series:
     """If series contains sub-strings from "to_none" - explicitly set None
@@ -59,15 +63,17 @@ def convert_to_none(
         to_none: Tuple of sub-strings to mark rows as Nones
         contains: if True - check that series contains string. 
         Compare to full string if False
+        lower_strip: if True, make lower and strip
 
     Returns:
         Series with Nones instead of sub-string (or whole string) from "to_none"
     """
     series = series.copy()
-    series = (
-        series.str.lower()
-        .str.strip()
-    )
+    if lower_strip:
+        series = (
+            series.str.lower()
+            .str.strip()
+        )
     
     for sub_str in to_none:
         if len(sub_str) == 0:
@@ -382,6 +388,7 @@ def get_categorical_feature(
     series:pd.Series,
     isin_dict:dict=None,
     mask_dict:dict=None,
+    lower_strip:bool=True,
 )->pd.Series:
     """Get categorical grouped categorical features according to dicts.
 
@@ -392,12 +399,14 @@ def get_categorical_feature(
         Defaults to None.
         mask_dict: Dict which keys - new values, and values are mask to which 
         necessary to apply new values. Defaults to None.
+        lower_strip: if True, make lower and strip
+        
 
     Returns:
         Series with new groups
     """
-    
-    series = series.str.strip().str.lower()
+    if lower_strip:
+        series = series.str.strip().str.lower()
     
     new_series = series.copy()
     new_series.loc[:] = np.nan
