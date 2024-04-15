@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import json
+import re
 
 num_regex = r'[0-9]+\.{0,1}[0-9]*'
 
@@ -785,3 +787,209 @@ def get_street_feature(
     street.loc[street_with_nans.isna()] = np.nan
     
     return street
+
+
+# HOMEFACTS AND SCHOOL
+
+def get_series_json(
+    series:pd.Series,
+    to_replace:tuple=(
+        ("'", '"'),
+        ('None', 'null'),
+    ),
+    complicated_quotes:bool=True,
+)->pd.Series:
+    """ Get deserialized series with string-transformation to python 
+    structures, like lists or dict via json.loads
+
+    Args:
+        series: original series with str instead of 
+        python-structure in the cells
+        to_replace: tuple to replace
+        complicated_quotes: process complicated quotes if True
+
+    Returns:
+        deserialized series
+    """
+    series = series.copy()
+
+    if complicated_quotes:
+        # Replace single quotes inside another quotes pair
+        series = series.apply(
+            lambda string:\
+                re.sub(r" '([a-zA-Z]+)' ", r" \g<1> ", string)
+        )
+        # Replace single quote to "`"
+        series = series.apply(
+            lambda string:\
+                re.sub(
+                    r'([a-zA-Z]{1}\\*)\'(\s*[a-zA-Z]{1})', 
+                    r'\g<1>`\g<2>', 
+                    string
+                )
+        )
+    # Replace single quotes to double, None to json-applicable null
+    series = replace(
+        series=series,
+        to_replace=to_replace,
+        lower_strip=False
+    )
+    # Load data via json and return series in python-structure
+    series_json = series.apply(json.loads)
+    return series_json
+
+
+def get_df_home_facts(df:pd.DataFrame)->pd.DataFrame:
+    """ Retrieve features from homeFacts columns if the latter exists.
+
+    Args:
+        df: Dataframe with homeFacts column
+
+    Returns:
+        DataFrame with new features retrieved from homeFacts
+    """
+
+    df = df.copy()
+    if 'homeFacts' in df.columns:
+        facts_df = pd.DataFrame(
+            get_series_json(
+                df['homeFacts'],
+                to_replace=(
+                    ('"closet"', 'closet'),
+                    ("'", '"'),
+                    ('None', 'null'),
+                ),
+            )
+        )
+        facts_lt = []
+
+        def get_fact_lt(row:pd.Series):
+            """Function to get dict of facts which appends to the facts_lt
+
+            Args:
+                row: current row
+            """
+            row_dict = {}
+            
+            def get_dict(fact_pair):
+                """Function for the list-mapping inside the Series 
+                to put facts from current row to the row_dict and then append 
+                this dict to the facts_lt
+
+                Args:
+                    fact_pair: pair from list to which map applies
+                """
+                label = (
+                    fact_pair['factLabel'].lower().strip().replace(' ', '_')
+                )
+                value = fact_pair['factValue']
+                row_dict[label] = value
+            
+            list(map(get_dict, row['homeFacts']['atAGlanceFacts']));
+            facts_lt.append(row_dict)
+        
+        # Apply list-mapping function and concat result to df 
+        facts_df.apply(get_fact_lt, axis=1)
+        df = pd.concat((df, pd.DataFrame(facts_lt)), axis=1)
+    
+        # DROP old column
+        df = df.drop('homeFacts', axis=1)
+    
+    return df
+
+
+def get_df_schools(df:pd.DataFrame)->pd.DataFrame:
+    """ Retrieve features from schools columns if the latter exists.
+
+    Args:
+        df: Dataframe with schools column
+
+    Returns:
+        DataFrame with new features retrieved from schools
+    """
+
+    df = df.copy()
+    if 'schools' in df.columns:
+        school_series = get_series_json(df['schools'])
+        school_series = school_series.apply(lambda x: x[0])
+        schools_df = pd.DataFrame(
+            school_series
+        )
+        schools_lt = []
+
+        def get_school_lt(row:pd.Series):
+            """Function to get dict of school columns 
+            which appends to the schools_lt
+
+            Args:
+                row: current row
+            """
+            root_dict = row.values[0]
+            
+            feature_dict = {}
+            
+            def get_dict(sub_dict):
+                """Function for the list-mapping inside the Series 
+                to put school features from current row to the row_dict 
+                and then append this dict to the schools_lt
+
+                Args:
+                    sub_dict: pair from list to which map applies
+                """
+                
+                for key in sub_dict:
+                    # Recursive call for sub-dict with key "data"
+                    if key == 'data':
+                        get_dict(sub_dict[key])
+                        continue
+                    # Get lower-case key and apply sub-dict
+                    modified_key = 'school_'+key.lower().strip() 
+                    feature_dict[modified_key] = sub_dict[key]
+                    
+                return feature_dict
+
+            schools_lt.append(get_dict(root_dict))
+        
+        # Apply list-mapping function and concat result to df 
+        schools_df.apply(get_school_lt, axis=1)
+        df = pd.concat((df, pd.DataFrame(schools_lt)), axis=1)
+    
+        # DROP old column
+        df = df.drop('schools', axis=1)
+    
+    return df
+
+
+def get_df_with_lists(
+    df:pd.DataFrame,
+    column_names:tuple=(
+        'school_rating',
+        'school_distance',
+        'school_grades',
+        'school_name'
+    ),
+    complicated_quotes:bool=False,
+)->pd.DataFrame:
+    """Convert str to lists
+
+    Args:
+        df: Origin df
+        column_names: Columns to convert str to lists. 
+        Defaults to ( 'school_rating', 'school_distance', 'school_grades', 'school_name' ).
+        complicated_quotes: process complicated quotes if True
+
+    Returns:
+        Dataframe with lists instead of str inside series
+    """
+    
+    df = df.copy()
+    for name in column_names:
+        if name in df.columns:
+            df[name] = get_series_json(
+                df[name],
+                complicated_quotes=complicated_quotes,
+            )
+        else:
+            print(f'WARNING: {name} is not in the df.columns')
+            
+    return df

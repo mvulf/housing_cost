@@ -1,10 +1,6 @@
 outs:
-- hash: md5
+- md5: 574a727be51c1871bfb081f31367eeaf.dir
+  size: 450582170
+  nfiles: 3
+  hash: md5
   path: data
-  files:
-  - relpath: .DS_Store
-    md5: dcd2a5e2ea441e61173b9c4d0fff56ba
-  - relpath: interim/1.0_first_process.csv
-    md5: dfdba94b26dd942de1625ff20e150fee
-  - relpath: raw/data.csv
-    md5: 3288ebe83c144f7c0aa3d3c580920ee9
