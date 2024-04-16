@@ -993,3 +993,31 @@ def get_df_with_lists(
             print(f'WARNING: {name} is not in the df.columns')
             
     return df
+
+
+# Year build
+
+def get_num_year(
+    series:pd.Series, 
+    between_years:tuple=(1700, 2024)
+)->pd.Series:
+    """Convert year to numerical value with dropping future years
+
+    Args:
+        series: original year description
+        between_years: Threshold of min-max year. Defaults to (1700, 2024).
+
+    Returns:
+        Cropped year series (numerical)
+    """
+    
+    series = series.copy()
+    
+    series = get_numerical_feature(
+        series,
+        to_none=('no data',)
+    )
+    
+    series.loc[~series.between(*between_years)] = np.nan
+    
+    return series

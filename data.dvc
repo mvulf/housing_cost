@@ -3,8 +3,13 @@ outs:
   path: data
   files:
   - relpath: .DS_Store
-    md5: f6066db18968cb9086fa39cde5625944
+    md5: 96c0a1d683b5ef02e9f49b8b6a7196dc
+    size: 8196
   - relpath: interim/1.0_first_process.csv
-    md5: 2b50b79ea78c924979860548e6029890
+    md5: 667a6d148df9050b013085b443dadbfd
+    size: 152503181
+  - relpath: processed/1.0_baseline.csv
+    md5: 2d352265a5ce947d77cd771dc6f598c1
+    size: 19366436
   - relpath: raw/data.csv
     md5: 3288ebe83c144f7c0aa3d3c580920ee9
