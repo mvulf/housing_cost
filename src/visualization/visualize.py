@@ -186,3 +186,44 @@ def plot_scatter(
     ax.set_title(title)
     
     return fig
+
+
+def plot_heatmap(
+    heat_data,
+    title:str='',
+    vmin:float=-1.,
+    vmax:float=1.,
+    cmap:str='coolwarm',
+    annot:bool=True,
+    fmt:str='.2f',
+    **kwargs,
+):
+    """Plot heatmap
+
+    Args:
+        heat_data: Data for the heatmap
+        title: Title of the plot. Defaults to ''.
+        vmin: Min threshold for colormap. Defaults to -1..
+        vmax: Max threshold for colormap. Defaults to 1..
+        cmap: Colormap style. Defaults to 'coolwarm'.
+        annot: Annotation in plot. Defaults to True.
+        fmt: Annotation format. Defaults to '.2f'.
+
+    Returns:
+        Figure with heatmap
+    """
+    ax = sns.heatmap(
+        data=heat_data,
+        vmin=vmin,
+        vmax=vmax,
+        cmap=cmap,
+        annot=annot,
+        fmt=fmt,
+        **kwargs,   
+    )
+    
+    ax.set_title(title)
+    
+    fig = ax.get_figure()
+    
+    return fig
