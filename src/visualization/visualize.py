@@ -2,6 +2,13 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+from IPython.display import display
+
+import sys
+root_folder = '../../'
+sys.path.append(root_folder)
+from src.utils import get_percentage
+
 
 def plot_boxplot(
     data:pd.DataFrame, 
@@ -186,6 +193,41 @@ def plot_scatter(
     ax.set_title(title)
     
     return fig
+
+
+def plot_numerical_stats(
+    df:pd.DataFrame,
+    feature_names:tuple = (),
+    target:str='target',
+    logx:bool=True,
+    logy:bool=True,
+):
+    
+    for feature_name in feature_names:
+        print(feature_name)
+        display(df[feature_name].describe())
+        print(
+            f'Доля объявлений с пропуском в {feature_name}:', 
+            get_percentage(df[feature_name].isna().sum(), df.shape[0])
+        )
+
+        plot_box_hist_plot(
+            df, 
+            feature_name, 
+            log_scale=logx, 
+            title=f'{feature_name} count',
+        );
+        
+        plot_scatter(
+            data=df,
+            x=feature_name,
+            y=target,
+            logx=logx,
+            logy=logy,
+            y_label='price [$]',
+            title=f'Price - {feature_name} plot',
+            linewidth=0,
+        );
 
 
 def plot_heatmap(

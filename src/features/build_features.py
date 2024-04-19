@@ -1021,3 +1021,47 @@ def get_num_year(
     series.loc[~series.between(*between_years)] = np.nan
     
     return series
+
+
+# Lotsize
+
+def get_numerical_lotsize(lotsize:pd.Series)->pd.Series:
+    """Get numerical lotsize with acres convertation to sqft
+
+    Args:
+        lotsize: series for the transformation
+
+    Returns:
+        Series with numerical lotsize in sqft
+    """
+    lotsize = lotsize.copy()
+    sqft_in_acre = 43560
+    
+    if lotsize.dtype == 'O':
+        lotsize = lotsize.copy()
+    
+        lotsize = convert_to_none(
+            lotsize,
+            to_none=(
+                '-',
+                '—',
+                '',
+                'no'
+            )
+        )
+        lotsize = lotsize.str.replace(',', '')
+        
+        # Prepare acre mask
+        acre_mask = lotsize.str.contains('acre', na=False)
+        
+        # Find nums, get nums from list and convert lotsize to numeric
+        lotsize = lotsize.str.findall(
+            r'[0-9]+\.{0,1}[0-9]*'
+        ).apply(lambda x: x[0] if isinstance(x, list) else np.nan)
+        lotsize = pd.to_numeric(lotsize)
+        
+        # Convert implicit acres to sqft with acre_mask values
+        full_acre_mask = acre_mask | (lotsize < 1)
+        lotsize.loc[full_acre_mask] = lotsize.loc[full_acre_mask] * sqft_in_acre
+
+    return lotsize
