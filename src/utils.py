@@ -1,7 +1,7 @@
 import pandas as pd
 
 def get_percentage(count, df_size, fmt='.3f'):
-    """_summary_
+    """Return formatted percents
 
     Args:
         count: number of feature, to which necessary to get percentage
@@ -12,3 +12,13 @@ def get_percentage(count, df_size, fmt='.3f'):
         String with formated percentage
     """
     return f'{count/df_size * 100:{fmt}}%'
+
+
+# def get_dict(**kwargs)->dict:
+#     return vars()['kwargs']
+def get_dict(**kwargs)->dict:
+    """
+    Returns:
+        Dict of kwargs
+    """
+    return {**kwargs}
