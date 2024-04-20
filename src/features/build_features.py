@@ -5,6 +5,111 @@ import re
 
 num_regex = r'[0-9]+\.{0,1}[0-9]*'
 
+
+def replace_str(
+    string:str,
+    to_replace:tuple,
+    lower_strip:bool=True,
+    regexp:bool=False,
+)->str:
+    """Replace substrings in string
+
+    Args:
+        string: original string for replace
+        to_replace: tuple of tuples to replace
+        lower_strip: Make lower if true. Defaults to True.
+
+    Returns:
+        String with replaced substings
+    """
+    if lower_strip:
+        string = string.lower().strip()
+    for item in to_replace:
+        if regexp:
+            string = re.sub(*item, string)
+        else:
+            string = string.replace(*item)
+    return string
+        
+
+def convert_str_to_none(
+    string:str,
+    to_none:tuple,
+    contains:bool=True,
+    lower_strip:bool=True,
+)->str:
+    """Convert string to none, if it contains substrings from to_none
+
+    Args:
+        string: original string
+        to_none: tuple of substrings to check
+        contains: just contains or full coincidence. Defaults to True.
+        lower_strip: Make lower if true. Defaults to True.
+
+    Returns:
+        String or np.nan if original string contains any substrings from to_none
+    """
+    if lower_strip:
+        string = string.lower().strip()
+    
+    for sub_str in to_none:
+        if len(sub_str) == 0:
+            if len(string) == 0:
+                return np.nan
+        else:
+            if contains:
+                if sub_str in string:
+                    return np.nan
+            else:
+                if sub_str == string:
+                    return np.nan
+    return string
+    
+
+def get_array(
+    str_list:list,
+    to_replace=(),
+    to_none=(),
+    dtype='float32'
+):
+    """Get numerical array 
+
+    Args:
+        str_list: list of string for convertation to array
+        to_replace: Tuple of tuples to replace (old_str, new_str). 
+        Defaults to ().
+        to_none: tuple for convertation to none. Defaults to ().
+    """
+    def prepare_string(
+        string,
+    )->str:
+        """
+        Returns:
+            String with replacements or even none, if to_none condition satisfied
+        """
+        string = replace_str(
+            string,
+            to_replace=to_replace
+        )
+        string = convert_str_to_none(
+            string,
+            to_none=to_none
+        )
+        return string
+        
+    if isinstance(str_list, list):
+        if len(str_list) > 0:
+            array = np.array(
+                list(map(
+                    lambda x: prepare_string(x),
+                    str_list
+                )),
+                dtype=dtype
+            )
+            return array
+    return np.nan
+
+
 # def get_min(value):
 #     """Get minimum value in the case of list and just value, if it single
 
@@ -535,7 +640,7 @@ def get_df_mls(df:pd.DataFrame)->pd.DataFrame:
                 ~df[mls_column].str.contains(',', na=False),
                 mls_column
             ] = np.nan
-            df[mls_column] = convert_to_none(df[mls_column], ('',))
+            df[mls_column] = convert_to_none(df[mls_column], ('',), contains=False)
         # Fill with True, if any information exists
         df['mls'] = False
         df.loc[
@@ -848,10 +953,10 @@ def get_df_proptype(df:pd.DataFrame)->pd.DataFrame:
         new_property_type = get_categorical_feature(
             property_type,
             mask_dict=mask_style_dict,
-            first_launch=False
+            # first_launch=False
         )
-        # df.loc[df['property_type'].isna(), 'property_type'] = new_property_type
-        df['property_type'] = new_property_type
+        df.loc[df['property_type'].isna(), 'property_type'] = new_property_type
+        # df['property_type'] = new_property_type
         
         # FILL STORIES by values from propertyType
         property_type = replace(
@@ -1116,8 +1221,10 @@ def get_df_parking(
             df['parking'],
             to_none=(
                 'no data',
+                'null',
                 ''
-            )
+            ),
+            contains=False
         )
         # Get categorical feature with four main values
         # on street
@@ -1216,7 +1323,8 @@ def get_df_heat_cool(
             df[feature] = df[feature].str.lower().str.strip()
             df[feature] = convert_to_none(
                 df[feature],
-                to_none=('no data', '')
+                to_none=('no data', ''),
+                contains=False
             )
             
             central_mask = (
@@ -1250,3 +1358,65 @@ def get_df_heat_cool(
         print('WARNING: no "heating" or "cooling" in columns')
 
     return df
+
+# SCHOOL
+
+def get_numerical_distance(
+    series:pd.Series
+)->pd.Series:
+    """Get array with numerical distance
+
+    Args:
+        series: original series
+
+    Returns:
+        Series with arrays instead of lists
+    """
+    series = series.copy()
+
+    def get_configured_array(source_list:list):
+        to_replace=(
+            ('mi', ''),
+        )
+        to_none=()
+        array = get_array(
+            source_list,
+            to_replace=to_replace,
+            to_none=to_none
+        )
+        return array
+    
+    series = series.apply(get_configured_array)
+    
+    return series
+    
+
+def get_numerical_rating(
+    series:pd.Series
+)->pd.Series:
+    """Get array with numerical rating
+
+    Args:
+        series: original series
+
+    Returns:
+        Series with arrays instead of lists
+    """
+    series = series.copy()
+
+    def get_configured_array(source_list:list):
+        to_replace=(
+            ('/10', ''),
+        )
+        to_none=('nr', 'null', 'na', '')
+        array = get_array(
+            source_list,
+            to_replace=to_replace,
+            to_none=to_none
+        )
+        return array
+    
+    series = series.apply(get_configured_array)
+    
+    return series
+    

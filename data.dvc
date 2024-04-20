@@ -6,8 +6,8 @@ outs:
     md5: 96c0a1d683b5ef02e9f49b8b6a7196dc
     size: 8196
   - relpath: interim/1.0_first_process.csv
-    md5: 1b85d90e7b72afdd1fe4f9d96dd95a03
-    size: 155588747
+    md5: 7e9f3258b68584a97b2a800d849d489e
+    size: 152904873
   - relpath: processed/1.0_baseline.csv
     md5: 5ee92eb6fb005be53a447a2dec71b9f5
     size: 26625940
