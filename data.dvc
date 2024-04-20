@@ -6,10 +6,10 @@ outs:
     md5: 96c0a1d683b5ef02e9f49b8b6a7196dc
     size: 8196
   - relpath: interim/1.0_first_process.csv
-    md5: 85a2955fca34b586abbd5983a838227b
-    size: 151477565
+    md5: 1b85d90e7b72afdd1fe4f9d96dd95a03
+    size: 155588747
   - relpath: processed/1.0_baseline.csv
-    md5: 37ffc9f0db25c2e5aa482e41f331e6ef
-    size: 21605663
+    md5: 5ee92eb6fb005be53a447a2dec71b9f5
+    size: 26625940
   - relpath: raw/data.csv
     md5: 3288ebe83c144f7c0aa3d3c580920ee9

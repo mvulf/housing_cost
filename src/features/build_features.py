@@ -5,6 +5,22 @@ import re
 
 num_regex = r'[0-9]+\.{0,1}[0-9]*'
 
+# def get_min(value):
+#     """Get minimum value in the case of list and just value, if it single
+
+#     Args:
+#         value: list or scalar
+
+#     Returns:
+#         scalar (min in the case of list)
+#     """
+#     if isinstance(value, list):
+#         if len(value) > 0:
+#             return min(value)
+#         else:
+#             return np.nan
+#     return value
+
 def get_max(value):
     """Get maximum value in the case of list and just value, if it single
 
@@ -31,7 +47,7 @@ def replace(
 
     Args:
         stories: Series with stories
-        to_replace: tuple(str, str)
+        to_replace: tuple of tuple(str, str)
         lower_strip: if True, make lower and strip
 
     Returns:
@@ -91,6 +107,209 @@ def convert_to_none(
                 ] = np.nan
     
     return series
+
+
+def get_numerical_feature(
+    series:pd.Series,
+    to_none:tuple=(),
+    to_replace:tuple=(),
+    # strategy:str='first', # Should be in ['first', 'last', 'max', 'min'] 
+)->pd.Series:
+    """Get numerical values if they are not ambiguous 
+    (only one number contains). 
+    But before getting numerical feature - refine series
+
+    Args:
+        series: series to get numerical feature
+        to_none: tuple to get none value. Defaults to ().
+        to_replace: tuple to replace. Defaults to ().
+        strategy: what value get from list. 
+
+    Returns:
+        Series with numerical type
+    """
+    series = series.copy()
+    
+    if series.dtype == 'O':
+        series = convert_to_none(series, to_none)
+        series = replace(series, to_replace)
+        
+        nums = series.str.findall(num_regex)
+        nums = nums.apply(lambda x: x if isinstance(x, list) else [])
+        
+        nums = nums.apply(lambda x: x[0] if len(x) == 1 else np.nan)
+        
+        return pd.to_numeric(nums)
+    
+    return series
+
+
+def get_mask_dict(
+    series:pd.Series,
+    keywords:tuple=(),
+)->dict:
+    """Get dict of masks acording to keywords
+
+    Args:
+        series: series for mask obtaining
+        keywords: tuple of words to get mask. Defaults to ().
+
+    Returns:
+        Dict {keyword: mask}
+    """
+    mask_dict = {}
+    for keyword in keywords:
+        mask_dict[keyword] = series.str.contains(keyword, na=False)
+    return mask_dict
+
+
+def get_categorical_feature(
+    series:pd.Series,
+    isin_dict:dict=None,
+    mask_dict:dict=None,
+    lower_strip:bool=True,
+    first_launch:bool=True,
+)->pd.Series:
+    """Get categorical grouped categorical features according to dicts.
+
+    Args:
+        series: Source series
+        isin_dict: Dict which keys - new values, and values are lists of 
+        old values. They are used to check that value isin the list. 
+        Defaults to None.
+        mask_dict: Dict which keys - new values, and values are mask to which 
+        necessary to apply new values. Defaults to None.
+        lower_strip: if True, make lower and strip
+        first_launch: init series with nans, if first_launch == True
+        
+
+    Returns:
+        Series with new groups
+    """
+    if lower_strip:
+        series = series.str.strip().str.lower()
+    
+    new_series = series.copy()
+    if first_launch:
+        new_series.loc[:] = np.nan
+    # Prepare group values
+    if isinstance(isin_dict, dict):
+        for new_value, old_values in isin_dict.items():
+            new_series.loc[series.isin(old_values)] = new_value
+    # Fill by masks:
+    if isinstance(mask_dict, dict):
+        for new_value, mask in mask_dict.items():
+            new_series.loc[mask] = new_value
+    
+    return new_series
+
+
+def get_bool_feature(
+    series:pd.Series,
+    to_none:tuple=(),    
+)->pd.Series:
+    """Create bool feature by None - False
+
+    Args:
+        series: series to get numerical feature
+        to_none: tuple to get none value. Defaults to ().
+
+    Returns:
+        Series with boolean type
+    """
+    
+    series = series.copy()
+    
+    if series.dtype == 'O':
+        # Convert to none 
+        series = convert_to_none(series, to_none, contains=False)
+        # True, if values are keeped
+        series = series.notna()
+    
+    return series
+
+
+def get_series_json(
+    series:pd.Series,
+    to_replace:tuple=(
+        ("'", '"'),
+        ('None', 'null'),
+    ),
+    complicated_quotes:bool=True,
+)->pd.Series:
+    """ Get deserialized series with string-transformation to python 
+    structures, like lists or dict via json.loads
+
+    Args:
+        series: original series with str instead of 
+        python-structure in the cells
+        to_replace: tuple to replace
+        complicated_quotes: process complicated quotes if True
+
+    Returns:
+        deserialized series
+    """
+    series = series.copy()
+
+    if complicated_quotes:
+        # Replace single quotes inside another quotes pair
+        series = series.apply(
+            lambda string:\
+                re.sub(r" '([a-zA-Z]+)' ", r" \g<1> ", string)
+        )
+        # Replace single quote to "`"
+        series = series.apply(
+            lambda string:\
+                re.sub(
+                    r'([a-zA-Z]{1}\\*)\'(\s*[a-zA-Z]{1})', 
+                    r'\g<1>`\g<2>', 
+                    string
+                )
+        )
+    # Replace single quotes to double, None to json-applicable null
+    series = replace(
+        series=series,
+        to_replace=to_replace,
+        lower_strip=False
+    )
+    # Load data via json and return series in python-structure
+    series_json = series.apply(json.loads)
+    return series_json
+
+
+def get_df_with_lists(
+    df:pd.DataFrame,
+    column_names:tuple=(
+        'school_rating',
+        'school_distance',
+        'school_grades',
+        'school_name'
+    ),
+    complicated_quotes:bool=False,
+)->pd.DataFrame:
+    """Convert str to lists
+
+    Args:
+        df: Origin df
+        column_names: Columns to convert str to lists. 
+        Defaults to ( 'school_rating', 'school_distance', 'school_grades', 'school_name' ).
+        complicated_quotes: process complicated quotes if True
+
+    Returns:
+        Dataframe with lists instead of str inside series
+    """
+    
+    df = df.copy()
+    for name in column_names:
+        if name in df.columns:
+            df[name] = get_series_json(
+                df[name],
+                complicated_quotes=complicated_quotes,
+            )
+        else:
+            print(f'WARNING: {name} is not in the df.columns')
+            
+    return df
 
 
 def get_numerical_target(target:pd.Series)->pd.Series:
@@ -236,39 +455,6 @@ def get_df_numerical_story(df:pd.DataFrame)->pd.DataFrame:
 
 # BATHS and BEDS
 
-def get_numerical_feature(
-    series:pd.Series,
-    to_none:tuple=(),
-    to_replace:tuple=(),
-)->pd.Series:
-    """Get numerical values if they are not ambiguous 
-    (only one number contains). 
-    But before getting numerical feature - refine series
-
-    Args:
-        series: series to get numerical feature
-        to_none: tuple to get none value. Defaults to ().
-        to_replace: tuple to replace. Defaults to ().
-
-    Returns:
-        Series with numerical type
-    """
-    series = series.copy()
-    
-    if series.dtype == 'O':
-        series = convert_to_none(series, to_none)
-        series = replace(series, to_replace)
-        
-        nums = series.str.findall(num_regex)
-        nums = nums.apply(lambda x: x if isinstance(x, list) else [])
-        
-        nums = nums.apply(lambda x: x[0] if len(x) == 1 else np.nan)
-        
-        return pd.to_numeric(nums)
-    
-    return series
-
-
 def get_df_beds_from_baths(
     df:pd.DataFrame
 )->pd.DataFrame:
@@ -313,31 +499,7 @@ def get_df_private_pool(df:pd.DataFrame)->pd.DataFrame:
     return df
 
 
-# Fireplace
-
-def get_bool_feature(
-    series:pd.Series,
-    to_none:tuple=(),    
-)->pd.Series:
-    """Create bool feature by None - False
-
-    Args:
-        series: series to get numerical feature
-        to_none: tuple to get none value. Defaults to ().
-
-    Returns:
-        Series with boolean type
-    """
-    
-    series = series.copy()
-    
-    if series.dtype == 'O':
-        # Convert to none 
-        series = convert_to_none(series, to_none, contains=False)
-        # True, if values are keeped
-        series = series.notna()
-    
-    return series
+# Fireplace used bool_feature
 
 
 # MLS
@@ -384,44 +546,6 @@ def get_df_mls(df:pd.DataFrame)->pd.DataFrame:
         df = df.drop(['mls-id', 'MlsId'], axis=1)
         
     return df
-
-
-def get_categorical_feature(
-    series:pd.Series,
-    isin_dict:dict=None,
-    mask_dict:dict=None,
-    lower_strip:bool=True,
-)->pd.Series:
-    """Get categorical grouped categorical features according to dicts.
-
-    Args:
-        series: Source series
-        isin_dict: Dict which keys - new values, and values are lists of 
-        old values. They are used to check that value isin the list. 
-        Defaults to None.
-        mask_dict: Dict which keys - new values, and values are mask to which 
-        necessary to apply new values. Defaults to None.
-        lower_strip: if True, make lower and strip
-        
-
-    Returns:
-        Series with new groups
-    """
-    if lower_strip:
-        series = series.str.strip().str.lower()
-    
-    new_series = series.copy()
-    new_series.loc[:] = np.nan
-    # Prepare group values
-    if isinstance(isin_dict, dict):
-        for new_value, old_values in isin_dict.items():
-            new_series.loc[series.isin(old_values)] = new_value
-    # Fill by masks:
-    if isinstance(mask_dict, dict):
-        for new_value, mask in mask_dict.items():
-            new_series.loc[mask] = new_value
-    
-    return new_series
     
 
 # STATUS
@@ -504,7 +628,7 @@ def get_status_feature(status:pd.Series)->pd.Series:
     return new_status
 
 
-def get_df_type(df:pd.DataFrame)->pd.DataFrame:
+def get_df_proptype(df:pd.DataFrame)->pd.DataFrame:
     
     if 'propertyType' in df.columns:
         df = df.copy()
@@ -724,8 +848,10 @@ def get_df_type(df:pd.DataFrame)->pd.DataFrame:
         new_property_type = get_categorical_feature(
             property_type,
             mask_dict=mask_style_dict,
+            first_launch=False
         )
-        df.loc[df['property_type'].isna(), 'property_type'] = new_property_type
+        # df.loc[df['property_type'].isna(), 'property_type'] = new_property_type
+        df['property_type'] = new_property_type
         
         # FILL STORIES by values from propertyType
         property_type = replace(
@@ -790,55 +916,6 @@ def get_street_feature(
 
 
 # HOMEFACTS AND SCHOOL
-
-def get_series_json(
-    series:pd.Series,
-    to_replace:tuple=(
-        ("'", '"'),
-        ('None', 'null'),
-    ),
-    complicated_quotes:bool=True,
-)->pd.Series:
-    """ Get deserialized series with string-transformation to python 
-    structures, like lists or dict via json.loads
-
-    Args:
-        series: original series with str instead of 
-        python-structure in the cells
-        to_replace: tuple to replace
-        complicated_quotes: process complicated quotes if True
-
-    Returns:
-        deserialized series
-    """
-    series = series.copy()
-
-    if complicated_quotes:
-        # Replace single quotes inside another quotes pair
-        series = series.apply(
-            lambda string:\
-                re.sub(r" '([a-zA-Z]+)' ", r" \g<1> ", string)
-        )
-        # Replace single quote to "`"
-        series = series.apply(
-            lambda string:\
-                re.sub(
-                    r'([a-zA-Z]{1}\\*)\'(\s*[a-zA-Z]{1})', 
-                    r'\g<1>`\g<2>', 
-                    string
-                )
-        )
-    # Replace single quotes to double, None to json-applicable null
-    series = replace(
-        series=series,
-        to_replace=to_replace,
-        lower_strip=False
-    )
-    # Load data via json and return series in python-structure
-    series_json = series.apply(json.loads)
-    return series_json
-
-
 def get_df_home_facts(df:pd.DataFrame)->pd.DataFrame:
     """ Retrieve features from homeFacts columns if the latter exists.
 
@@ -960,43 +1037,7 @@ def get_df_schools(df:pd.DataFrame)->pd.DataFrame:
     return df
 
 
-def get_df_with_lists(
-    df:pd.DataFrame,
-    column_names:tuple=(
-        'school_rating',
-        'school_distance',
-        'school_grades',
-        'school_name'
-    ),
-    complicated_quotes:bool=False,
-)->pd.DataFrame:
-    """Convert str to lists
-
-    Args:
-        df: Origin df
-        column_names: Columns to convert str to lists. 
-        Defaults to ( 'school_rating', 'school_distance', 'school_grades', 'school_name' ).
-        complicated_quotes: process complicated quotes if True
-
-    Returns:
-        Dataframe with lists instead of str inside series
-    """
-    
-    df = df.copy()
-    for name in column_names:
-        if name in df.columns:
-            df[name] = get_series_json(
-                df[name],
-                complicated_quotes=complicated_quotes,
-            )
-        else:
-            print(f'WARNING: {name} is not in the df.columns')
-            
-    return df
-
-
 # Year build
-
 def get_num_year(
     series:pd.Series, 
     between_years:tuple=(1700, 2024)
@@ -1024,7 +1065,6 @@ def get_num_year(
 
 
 # Lotsize
-
 def get_numerical_lotsize(lotsize:pd.Series)->pd.Series:
     """Get numerical lotsize with acres convertation to sqft
 
@@ -1040,28 +1080,173 @@ def get_numerical_lotsize(lotsize:pd.Series)->pd.Series:
     if lotsize.dtype == 'O':
         lotsize = lotsize.copy()
     
-        lotsize = convert_to_none(
-            lotsize,
-            to_none=(
-                '-',
-                '—',
-                '',
-                'no'
-            )
+        to_none = ('-', '—', '', 'no')
+        to_replace = (
+            (',', ''),
         )
-        lotsize = lotsize.str.replace(',', '')
+        
+        lotsize_num = get_numerical_feature(
+            lotsize,
+            to_none=to_none,
+            to_replace=to_replace,
+        )
         
         # Prepare acre mask
         acre_mask = lotsize.str.contains('acre', na=False)
-        
-        # Find nums, get nums from list and convert lotsize to numeric
-        lotsize = lotsize.str.findall(
-            r'[0-9]+\.{0,1}[0-9]*'
-        ).apply(lambda x: x[0] if isinstance(x, list) else np.nan)
-        lotsize = pd.to_numeric(lotsize)
-        
+        lotsize = lotsize_num
         # Convert implicit acres to sqft with acre_mask values
         full_acre_mask = acre_mask | (lotsize < 1)
-        lotsize.loc[full_acre_mask] = lotsize.loc[full_acre_mask] * sqft_in_acre
+        lotsize.loc[full_acre_mask] = (
+            lotsize.loc[full_acre_mask] * sqft_in_acre
+        )
 
     return lotsize
+
+
+# Parking
+def get_df_parking(
+    df:pd.DataFrame,
+)->pd.DataFrame:
+    
+    df = df.copy()
+    
+    if 'parking' in df.columns:
+        # Convert to Nans
+        df['parking'] = convert_to_none(
+            df['parking'],
+            to_none=(
+                'no data',
+                ''
+            )
+        )
+        # Get categorical feature with four main values
+        # on street
+        on_mask = (
+            df['parking'].str.contains('on street', na=False) |
+            df['parking'].str.contains('driveway', na=False)
+        )
+        # off street
+        off_mask = (
+            df['parking'].str.contains('off street', na=False) |
+            df['parking'].str.contains('parking', na=False)
+        )
+        # carport
+        port_mask = (
+            df['parking'].str.contains('carport', na=False)
+        )
+        # garage (attached or detached)
+        garage_mask = (
+            df['parking'].str.contains('garage', na=False) |
+            df['parking'].str.contains('attached', na=False) |
+            df['parking'].str.contains('detached', na=False)
+        )
+        mask_dict = {
+            'on street': on_mask,
+            'off street': off_mask,
+            'carport': port_mask,
+            'garage': garage_mask
+        }
+        df['parking_type'] = get_categorical_feature(
+            df['parking'],
+            mask_dict=mask_dict,
+        )
+        
+        # Get number of parking lots
+        def get_sum(find_list):
+            result = np.nan
+            if isinstance(find_list, list):
+                if len(find_list)>0:
+                    find_list = map(int, find_list)
+                    result = sum(find_list)
+            return result
+        df['parking_count'] = df['parking'].str.findall(r'[0-9]+')
+        df['parking_count'] = df['parking_count'].apply(get_sum)
+        # Fill with 1, if any parking was found
+        nan_count_mask = df['parking_count'].isna()
+        notna_parking_type_mask = df['parking_type'].notna()
+        df.loc[nan_count_mask & notna_parking_type_mask, 'parking_count'] = 1
+        
+        # Fill with space if parking_count not na
+        notna_parking_cnt = (
+            df['parking_count'].notna() &
+            (df['parking_count']>0)
+        )
+        space_mask = notna_parking_cnt & ~notna_parking_type_mask  
+        # Fill with "other"
+        other_mask = (
+            df['parking_type'].isna() &
+            df['parking'].notna()
+        )
+        mask_dict = {
+            'space': space_mask,
+            'other': other_mask,
+        }
+        df['parking_type'] = get_categorical_feature(
+            df['parking_type'],
+            mask_dict=mask_dict,
+            first_launch=False,
+        )
+        df = df.drop('parking', axis=1)
+        
+    return df
+
+
+# HEATING and COOLING
+
+def get_df_heat_cool(
+    df:pd.DataFrame
+)->pd.DataFrame:
+    
+    df = df.copy()
+    
+    # features = ['heating', 'cooling']
+    keywords_dict = {
+        'heating': (
+            'electric', 'gas', 'pump', 'furnace',
+            'baseboard', 'radiant', 'wall',
+        ),
+        'cooling': (
+            'electric', 'wall', 'refrigeration', 'evaporative', 'fan', 
+        )
+    }
+    features = list(keywords_dict.keys())
+    
+    if ('heating' in df.columns) and ('cooling' in df.columns):
+        for feature in features:
+            df[feature] = df[feature].str.lower().str.strip()
+            df[feature] = convert_to_none(
+                df[feature],
+                to_none=('no data', '')
+            )
+            
+            central_mask = (
+                df[feature].str.contains('central', na=False) |
+                df[feature].str.contains('forced', na=False)
+            )
+            df['central_' + feature] = central_mask
+            
+            mask_dict = get_mask_dict(
+                df[feature],
+                keywords_dict[feature]
+            )
+            df[feature + '_type'] = get_categorical_feature(
+                df[feature],
+                mask_dict=mask_dict
+            )
+            
+            # Fill nans with "central" if True
+            na_mask = df[feature + '_type'].isna()
+            mask = na_mask & central_mask
+            df.loc[mask, feature + '_type'] = 'central'
+            
+            # Fill with "other"
+            na_mask = df[feature + '_type'].isna()
+            notna_feature_mask = df[feature].notna()
+            mask = na_mask & notna_feature_mask
+            df.loc[mask, feature + '_type'] = 'other'
+            
+        df = df.drop(features, axis=1)
+    else:
+        print('WARNING: no "heating" or "cooling" in columns')
+
+    return df
