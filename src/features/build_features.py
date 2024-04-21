@@ -1419,4 +1419,21 @@ def get_numerical_rating(
     series = series.apply(get_configured_array)
     
     return series
-    
+
+
+def get_df_updated_years(
+    df:pd.DataFrame,
+    last_year:float=None,
+)->pd.DataFrame:
+    """Get df with years count from last remodeling/building
+    """
+    df = df.copy()
+    if 'remodeled_year' in df.columns:
+        year_columns = ['remodeled_year', 'year_built']
+        if last_year is None:
+            last_year = df[year_columns].max().max()
+            print(f'Последний упоминаемый год: {last_year}')
+        df['remodeled_year'] = get_num_year(df['remodeled_year'])
+        df['updated_years'] = last_year - df[year_columns].max(axis=1)
+        df = df.drop('remodeled_year', axis=1)
+    return df

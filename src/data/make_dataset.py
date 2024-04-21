@@ -72,8 +72,7 @@ def make_first_dataset(
     df = build_features.get_df_home_facts(df)
     df = build_features.get_df_schools(df)
     # Year built
-    feature_name = 'year_built'
-    df[feature_name] = build_features.get_num_year(df[feature_name])
+    df['year_built'] = build_features.get_num_year(df['year_built'])
     # Lotsize
     df['lotsize'] = build_features.get_numerical_lotsize(df['lotsize'])
     #Parking
