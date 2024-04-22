@@ -8,6 +8,9 @@ outs:
   - relpath: interim/1.0_first_process.csv
     md5: 7e9f3258b68584a97b2a800d849d489e
     size: 152904873
+  - relpath: interim/2.0_preprocessed.csv
+    md5: e83246176db0d1e3fa9cbed980e1f8ed
+    size: 70534722
   - relpath: processed/1.0_baseline.csv
     md5: 5ee92eb6fb005be53a447a2dec71b9f5
     size: 26625940

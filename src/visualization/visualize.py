@@ -289,6 +289,7 @@ def plot_numerical_stats(
     logx:bool=True,
     logy:bool=True,
     verbose:bool=True,
+    std_lines:bool=False
 ):
     
     for feature_name in feature_names:
@@ -305,6 +306,7 @@ def plot_numerical_stats(
             feature_name, 
             log_scale=logx, 
             title=f'{feature_name} count',
+            std_lines=std_lines
         );
         
         plot_scatter(

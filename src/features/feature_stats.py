@@ -140,3 +140,78 @@ def get_df_no_outliers(
     # all_outliers = all_outliers.drop_duplicates()
     
     return clean, all_outliers
+
+
+def fillna_by_reference(
+    df:pd.DataFrame,
+    reference:str,
+    features:tuple=(),
+)->pd.DataFrame:
+    """Fill nans by reference feature
+
+    Args:
+        df: data
+        reference: name of the reference feature
+        features: Features which is necessary to fill. Defaults to ().
+
+    Returns:
+        df with filled nans
+    """
+    df = df.copy()
+    
+    for feature in features:
+        for ref_value in df[reference].unique():
+            ref_value_mask = df[reference] == ref_value
+            df.loc[
+                (df[feature].isna()) & (ref_value_mask), 
+                feature
+            ] = df[ref_value_mask][feature].mode().iloc[0]
+    
+    return df
+
+
+def clip_by_thresholds(
+    df:pd.DataFrame,
+    feature_thresholds:dict,
+)->pd.DataFrame:
+    """Clip features by thresholds
+
+    Args:
+        df: source data
+        feature_thresholds: dict of feature thresholds
+
+    Returns:
+        Dataframe with clipped features
+    """
+    for feature in feature_thresholds:
+        thresholds = feature_thresholds[feature]
+        df[feature] = df[feature].clip(*thresholds)
+    
+    return df
+
+
+def fill_outliers(
+    df:pd.DataFrame,
+    features:tuple=(),
+    verbose:bool=True,
+    method:str='z-score'
+)->pd.DataFrame:
+    
+    df = df.copy()
+    for feature in features:
+        if verbose:
+            print(feature)
+        clean, outliers = get_df_no_outliers(
+            data=df,
+            feature=feature,
+            method=method,
+            verbose=verbose,
+        )
+        if verbose:
+            true_outliers_cnt = outliers[outliers[feature].notna()].shape[0]
+            print('Истинные выбросы (не NaNs):', true_outliers_cnt)
+        # Get thresholds for clean dataset and clip original dataset by them
+        thresholds = clean[feature].min(), clean[feature].max()
+        df[feature] = df[feature].clip(*thresholds)
+    
+    return df
