@@ -154,6 +154,7 @@ def cross_validate_pipe(
     ),
     return_train_score=True,
     averaging:bool=True,
+    njobs:int=-1,
     **kwargs,
 )->dict:
     """Cross-validate pipe and get averaged metrics
@@ -179,6 +180,7 @@ def cross_validate_pipe(
         cv=cv,
         scoring=scoring,
         return_train_score=return_train_score,
+        n_jobs=njobs,
     )
     
     if averaging:

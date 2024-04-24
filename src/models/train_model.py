@@ -2,6 +2,7 @@ import pandas as pd
 from IPython.display import display
 
 from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
 
 
 def get_X_y(
@@ -65,6 +66,9 @@ def make_pipeline(
             # Get pipe-format of the params name and keep them
             for param_name in params:
                 pipe_params[f'{name}__{param_name}'] = params[param_name]
+        elif elem_class == ColumnTransformer:
+            obj = elem_class(params)
+            pipe_params[f'{name}__transformers'] = params
         elif params is None:
             obj = elem_class()
         pipe_list.append(
