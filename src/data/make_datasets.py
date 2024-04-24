@@ -19,11 +19,21 @@ from src import utils
 from src.features import build_features, feature_stats
 
 source_data_path = Path(root_folder, 'data', 'raw', 'data.csv')
+interim_dir = Path(
+    root_folder, 'data', 'interim'
+)
+interim_dir.mkdir(parents=True, exist_ok=True)
+
+processed_dir = Path(
+    root_folder, 'data', 'processed'
+)
+processed_dir.mkdir(parents=True, exist_ok=True)
+
 first_export_path = Path(
-    root_folder, 'data', 'interim', '1.0_first_process.csv'
+    interim_dir, '1.0_first_process.csv'
 )
 preprocessed_data_path = Path(
-    root_folder, 'data', 'interim', '2.0_preprocessed.csv'
+    interim_dir, '2.0_preprocessed.csv'
 )
 
 def make_first_dataset(
@@ -32,6 +42,8 @@ def make_first_dataset(
     export_data_path:str=first_export_path,
     verbose:bool=True,
 )->pd.DataFrame:
+    print()
+    print('MAKE FIRST DATASET')
     raw_df = pd.read_csv(
         import_data_path
     )
@@ -105,6 +117,8 @@ def make_preprocessed_dataset(
 )->pd.DataFrame:
     """See detailed explanation in notebooks/2.1-mv-eda-preprocessing.ipynb
     """
+    print()
+    print('MAKE PREPROCESSED DATASET')
     df = pd.read_csv(
         import_data_path,
         index_col=0
@@ -353,7 +367,7 @@ def make_preprocessed_dataset(
     
     df = df.drop(['school_grades', 'school_name'], axis=1)
 
-    df['school_count'] = df['school_distance'].apply(len)
+    df['school_count'] = (df['school_distance'].apply(len)).astype('float64')
     df['school_distance'] = build_features.get_numerical_distance(
         df['school_distance']
     )
@@ -406,6 +420,9 @@ def make_processed_train_test(
     
     Returns tuple of train and test dataframes
     """
+    print()
+    print('MAKE PROCESSED TRAIN AND TEST')
+    
     df = pd.read_csv(
         import_data_path,
         index_col=0
@@ -447,15 +464,15 @@ def make_processed_train_test(
         
         if export:
             processed_data_path = Path(
-                root_folder, 'data', 'processed', name_format.format(name)
+                processed_dir, name_format.format(name)
             )
-            df.to_csv(processed_data_path)
+            sub_df.to_csv(processed_data_path)
         print()
     
     return dataframes
 
 if __name__ == '__main__':
     # MAKE ALL DATASETS STARTING FROM RAW
-    make_first_dataset()
-    make_preprocessed_dataset()
-    make_processed_train_test()
+    make_first_dataset();
+    make_preprocessed_dataset();
+    make_processed_train_test();
