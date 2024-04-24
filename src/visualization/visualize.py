@@ -371,6 +371,7 @@ def plot_heatmap(
     cmap:str='coolwarm',
     annot:bool=True,
     fmt:str='.2f',
+    figsize:tuple=(),
     **kwargs,
 ):
     """Plot heatmap
@@ -387,15 +388,28 @@ def plot_heatmap(
     Returns:
         Figure with heatmap
     """
-    ax = sns.heatmap(
-        data=heat_data,
-        vmin=vmin,
-        vmax=vmax,
-        cmap=cmap,
-        annot=annot,
-        fmt=fmt,
-        **kwargs,   
-    )
+    if len(figsize) == 2:
+        fig, ax = plt.subplots(figsize=figsize)
+        sns.heatmap(
+            data=heat_data,
+            vmin=vmin,
+            vmax=vmax,
+            cmap=cmap,
+            annot=annot,
+            fmt=fmt,
+            **kwargs,
+            ax=ax
+        )
+    else:
+        ax = sns.heatmap(
+            data=heat_data,
+            vmin=vmin,
+            vmax=vmax,
+            cmap=cmap,
+            annot=annot,
+            fmt=fmt,
+            **kwargs,   
+        )
     
     ax.set_title(title)
     

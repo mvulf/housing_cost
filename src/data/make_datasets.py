@@ -9,6 +9,8 @@ import numpy as np
 import json
 import re
 
+from sklearn.model_selection import train_test_split
+
 root_folder = '../../'
 
 sys.path.append(root_folder)
@@ -21,7 +23,7 @@ first_export_path = Path(
     root_folder, 'data', 'interim', '1.0_first_process.csv'
 )
 preprocessed_data_path = Path(
-    root_folder, 'data', 'interim', '2.1_preprocessed.csv'
+    root_folder, 'data', 'interim', '2.0_preprocessed.csv'
 )
 
 def make_first_dataset(
@@ -101,7 +103,7 @@ def make_preprocessed_dataset(
     export_data_path:str=preprocessed_data_path,
     verbose:bool=True,
 )->pd.DataFrame:
-    """See detailed explanation in notebooks/2.1.-mv-eda.ipynb
+    """See detailed explanation in notebooks/2.1-mv-eda-preprocessing.ipynb
     """
     df = pd.read_csv(
         import_data_path,
@@ -389,7 +391,71 @@ def make_preprocessed_dataset(
         df.info()
     if export:
         df.to_csv(export_data_path)
+    
+    return df
+        
+        
+def make_processed_train_test(
+    import_data_path:str=preprocessed_data_path,
+    export:bool=True,
+    verbose:bool=True,
+    random_state:int=42,
+    name_format:str='2.0_{}.csv',
+)->tuple:
+    """See detailed explanation in notebooks/2.2-mv-eda-feature-selection.ipynb.
+    
+    Returns tuple of train and test dataframes
+    """
+    df = pd.read_csv(
+        import_data_path,
+        index_col=0
+    )
+    if verbose:
+        df.info()
+    
+    df = pd.get_dummies(df)
+    
+    # According to statistical significance test (see notebook)
+    insignificant_features = ['mls', 'heating_type_other']
+    df = df.drop(insignificant_features, axis=1)
+    print(f'Размер датасета: {df.shape}')
+    
+    multicollinear_features = [
+        'target',
+        'parking_type_street',
+        'max_school_rating',
+        'cooling_type_central',
+        'status_active/sale'
+    ]
+    df = df.drop(multicollinear_features, axis=1)
+    print(f'Размер датасета: {df.shape}')
+    
+    train, test = train_test_split(
+        df,
+        test_size=0.2,
+        random_state=random_state,
+    )
+    train.reset_index(inplace=True, drop=True)
+    test.reset_index(inplace=True, drop=True)
+
+    dataframes = (('train', train), ('test', test))
+
+    for name, sub_df in dataframes:
+        print(f'Dataframe {name}')
+        if verbose:
+            sub_df.info()
+        
+        if export:
+            processed_data_path = Path(
+                root_folder, 'data', 'processed', name_format.format(name)
+            )
+            df.to_csv(processed_data_path)
+        print()
+    
+    return dataframes
 
 if __name__ == '__main__':
-    # make_first_dataset()
+    # MAKE ALL DATASETS STARTING FROM RAW
+    make_first_dataset()
     make_preprocessed_dataset()
+    make_processed_train_test()

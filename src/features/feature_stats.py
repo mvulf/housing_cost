@@ -1,4 +1,6 @@
 from scipy.stats import normaltest
+from scipy.stats import wilcoxon
+
 import pandas as pd
 import numpy as np
 
@@ -22,6 +24,51 @@ def test_normal(
         print(H0)
     else:
         print(Ha)
+
+
+def test_wilcoxon(
+    df:pd.DataFrame,
+    bool_features:tuple,
+    target:str='log_target',
+    alpha:float=0.01
+)->dict:
+    """ Conduct Wilcoxon sign-ranked test to check statistical significance
+    of difference between two distributions
+
+    Args:
+        df: Source df
+        bool_features: features to check statistical significance
+        target: Feature to check distribution. Defaults to 'log_target'.
+        alpha: Significance level. Defaults to 0.01.
+
+    Returns:
+        Dict of features and test results. True if statistical significance
+        was founded
+    """
+    
+    stat_importance = {}
+    
+    for feature in bool_features:
+        print('Рассматриваемый признак:', feature)
+        data_true = df[df[feature]][target]
+        data_false = df[~df[feature]][target]
+        min_length = min(data_true.shape[0], data_false.shape[0])
+        print('Размер выборок:', min_length)
+        stat, p = wilcoxon(
+            data_true.iloc[:min_length], 
+            data_false.iloc[:min_length]
+        )
+        if p > alpha:
+            print(f'p-value={p:.2e} > alpha={alpha:.2e}')
+            print(f'НЕТ статистически значимого различия по {target}')
+            stat_importance[feature] = False
+        else:
+            print(f'p-value={p:.2e} <= alpha={alpha:.2e}')
+            print(f'ЕСТЬ статистически значимое различие по {target}')
+            stat_importance[feature] = True
+        print()
+    
+    return stat_importance
         
 
 def get_outliers_iqr(
@@ -215,3 +262,35 @@ def fill_outliers(
         df[feature] = df[feature].clip(*thresholds)
     
     return df
+
+
+def get_correlated_df(
+    df:pd.DataFrame,
+    threshold:float = 0.7,
+    method:str='spearman',
+)->pd.DataFrame:
+    """Get correlation dataframe with cols/rows contains values more than threshold
+
+    Args:
+        df: source df
+        threshold: Correlation threshold. Defaults to 0.7 - refers to multicorrelation.
+        method: Method to compute correlation. Defaults to 'spearman'.
+
+    Returns:
+        Dataframe with correlated features
+    """
+    corr_df = df.corr(method=method)
+    # Drop ones on diagonals
+    real_corr_df = corr_df.copy()
+    for feature in real_corr_df.columns:
+        real_corr_df.loc[feature, feature] = np.nan
+    
+    correlated_cols = (
+        real_corr_df[np.abs(real_corr_df) >= threshold].notna().any()
+    )
+    
+    corr_df = corr_df.loc[correlated_cols, correlated_cols]
+    
+    return corr_df
+        
+        

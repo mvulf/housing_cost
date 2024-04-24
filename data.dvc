@@ -14,5 +14,11 @@ outs:
   - relpath: processed/1.0_baseline.csv
     md5: 5ee92eb6fb005be53a447a2dec71b9f5
     size: 26625940
+  - relpath: processed/2.0_test.csv
+    md5: 778787f3afd1fc729bfdebdd351cf89e
+    size: 97759605
+  - relpath: processed/2.0_train.csv
+    md5: 778787f3afd1fc729bfdebdd351cf89e
+    size: 97759605
   - relpath: raw/data.csv
     md5: 3288ebe83c144f7c0aa3d3c580920ee9
