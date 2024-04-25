@@ -209,8 +209,9 @@ $$
 | Gradient Boosting with manual set parameters | 0.534 | 42.8 |
 | **Gradient Boosting with optimized parameters** | **0.654** | **34.7** |
 
-![test_mape]()
-![test_r2]()
+![test_mape](https://github.com/mvulf/housing_cost/blob/main/reports/figures/test_mape.png)
+
+![test_r2](https://github.com/mvulf/housing_cost/blob/main/reports/figures/test_r2.png)
 
 Итого обучено и сохранено средствами MLFlow 11 моделей. Наилучшие показатели на тестовой выборке показал **"Gradient Boosting with optimized parameters"**. Он и был взят для [web-сервиса](https://github.com/mvulf/housing_cost/tree/main/web), предсказывающего стоимость жилья. 
 
