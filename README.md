@@ -106,7 +106,7 @@ poetry install
  - 3.1-mv-modelling-baseline.ipynb
  - 3.2-mv-modelling-pf-regularization.ipynb
  - 3.3-mv-modelling-random-forest.ipynb
- - и т.д.
+ - 3.4-mv-modelling-grad-boost.ipynb
 
 
 # Description
@@ -174,4 +174,48 @@ $$
 - и д.р.
 
 # Results
+
+В ходе работы над проектом были подготовлены train/test датасеты в пропорции 80/20. Последовательность их подготовки представлена в  [ноутбуках анализа и подготовки данных](https://github.com/mvulf/housing_cost/tree/main/notebooks):
+- 1.0-mv-data-understanding.ipynb
+- 2.0-mv-eda-baseline.ipynb
+- 2.1-mv-eda-preprocessing.ipynb
+- 2.2-mv-eda-feature-selection.ipynb
+
+Далее, на обучающей выборке применялась 5-ти фолдовая кросс-валидация для оптимизации гиперпараметров, а финальные метрики оценивались на тестовом датасете. Применялись метрики (см обоснование выше):
+- Средняя абсолютная ошибка, выраженная в процентах (**MAPE**);
+- Коэффициент детерминации (**$R^2$**).
+
+Процедура обучения моделей представлена в [ноутбуках моделирования](https://github.com/mvulf/housing_cost/tree/main/notebooks):
+ - 3.0-mv-modelling-init.ipynb
+ - 3.1-mv-modelling-baseline.ipynb
+ - 3.2-mv-modelling-pf-regularization.ipynb
+ - 3.3-mv-modelling-random-forest.ipynb
+ - 3.4-mv-modelling-grad-boost.ipynb
+
+
+Полученные результаты на тестовом датасете представлены в таблице (в порядке их получения):
+
+| Model | R^2 | MAPE [%] |
+|---|---|---|
+| Linear regression baseline after eda | 0.391 | 53.1 |
+| Decision tree baseline after eda | **0.492** | 49.2 |
+| Linear regression with StandardTransform | 0.390 | 53.0 |
+| Ridge regression with PolyFeatures and StandardTransform | **0.445** | **47.5** |
+| Lasso regression with PolyFeatures and StandardTransform | 0.434 | 47.8 |
+| ElasticNet regression with PolyFeatures and StandardTransform | 0.431 | 47.8 |
+| Init Random Forest | 0.471 | 49.7 |
+| Random Forest with manual set parameters | 0.535 | 45.4 |
+| **Random Forest with optimized parameters** | **0.610** | **36.8** |
+| Gradient Boosting with manual set parameters | 0.534 | 42.8 |
+| **Gradient Boosting with optimized parameters** | **0.654** | **34.7** |
+
+![test_mape]()
+![test_r2]()
+
+Итого обучено и сохранено средствами MLFlow 11 моделей. Наилучшие показатели на тестовой выборке показал **"Gradient Boosting with optimized parameters"**. Он и был взят для [web-сервиса](https://github.com/mvulf/housing_cost/tree/main/web), предсказывающего стоимость жилья. 
+
+Веб-сервис был собран в виде [контейнера](https://hub.docker.com/r/mvulf/housing_cost_image).
+Он принимает на вход датасет, для которого надо сделать предсказание, и возвращает "prediction"
+Порядок запуска теста представлен выше.
+
 
