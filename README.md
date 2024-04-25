@@ -223,7 +223,7 @@ $$\mathbb{E}\left(\frac{\text{Value}\_\text{trans}}{t_\text{trans}}\right) \righ
 Итого обучено и сохранено средствами MLFlow 11 моделей. Наилучшие показатели на тестовой выборке показал **"Gradient Boosting with optimized parameters"**. Он и был взят для [web-сервиса](https://github.com/mvulf/housing_cost/tree/main/web), предсказывающего стоимость жилья. 
 
 Веб-сервис был собран в виде [контейнера](https://hub.docker.com/r/mvulf/housing_cost_image).
-Он принимает на вход датасет, для которого надо сделать предсказание, и возвращает "prediction"
+Он принимает на вход датасет, для которого надо сделать предсказание, и возвращает "prediction".
 Порядок запуска теста представлен выше.
 
 
