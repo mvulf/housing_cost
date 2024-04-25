@@ -29,13 +29,14 @@ Directory structure inspired by [Cookiecutter Data Science](https://drivendata.g
 │
 ├── mlruns             <- Contains runs in MLFlow (Controled by DVC)
 │
-├── models             <- Trained and serialized models, model predictions, or model summaries
 │
 ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
 │                         the creator's initials, and a short `-` delimited description, e.g.
 │                         `1.0-jqp-initial-data-exploration`.
 │
-├── references         <- Data dictionaries, manuals, and all other explanatory materials.
+│
+├── web             <- Folder with the housing cost prediction server
+│
 │
 ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
 │
@@ -61,6 +62,15 @@ Directory structure inspired by [Cookiecutter Data Science](https://drivendata.g
  
 ```
 # How to launch prediction service
+
+Выполните команды:
+
+```bash
+$ docker pull mvulf/housing_cost_image
+$ docker run -it --rm --name=housing_cost_container -p=4000:4000 mvulf/housing_cost_image
+```
+
+Затем выполните код [web/test/client.py](https://github.com/mvulf/housing_cost/blob/main/web/test/client.py)
 
 # How to launch modelling
 
@@ -151,6 +161,7 @@ $$
 - Система контроля зависимостей [Poetry](https://python-poetry.org/)
 - Система контроля данных [DVC](https://dvc.org/)
 - Система логирования ML-экспериментов [MLFlow](https://mlflow.org/)
+- Контейнеризация [Docker](https://www.docker.com/)
 
 Также применялись библиотеки:
 - matplotlib
@@ -159,6 +170,7 @@ $$
 - scipy
 - scikit-learn
 - ydata-profiling
+- flask
 - и д.р.
 
 # Results
