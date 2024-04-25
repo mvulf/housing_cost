@@ -84,6 +84,85 @@ def plot_countplot(
     return fig
 
 
+def plot_bar(
+    data:pd.DataFrame, 
+    numeric_feature:str,
+    categorical_feature:str=None,
+    hue_feature:str=None,
+    log_scale:bool=False,
+    numeric_label:str=None,
+    categorical_label:str=None,
+    title:str=None,
+    orient:str='h',
+    figsize:tuple=(),
+    ordered:bool=False,
+    xrotation=None,
+):
+    """Plot barplot
+
+    Args:
+        data: data for plotting
+        numeric_feature: name of the feature to plot
+        categorical_feature: if several categories necessary to analyse (optional). Defaults to None.
+        hue_feature: if color labeling is required (optional). Defaults to None.
+        log_scale: scale for numeric-axis. Defaults to False.
+        numeric_label: special label for numeric axis, if required. Defaults to None.
+        categorical_label: special label for categorical axis, if required. Defaults to None.
+        title: plot title. Defaults to None.
+        orient: boxplots orientation. Defaults to 'h'.
+        figsize: size of the figure. Defaults to None.
+        ordered: Order by numerical value. Defaults to None.
+
+    Raises:
+        ValueError: If orientation differ from ['h', 'v']
+
+    Returns:
+        figure with plot
+    """
+    orient = orient.strip().lower()
+    if orient not in ['h', 'v']:
+        raise ValueError('incorrect "orient"')
+    if orient == 'h':
+        x, y = numeric_feature, categorical_feature
+        x_label, y_label = numeric_label, categorical_label
+    elif orient == 'v':
+        y, x = numeric_feature, categorical_feature
+        y_label, x_label = numeric_label, categorical_label
+    
+    order = None
+    if ordered:
+        order = (
+            data.groupby(categorical_feature)[numeric_feature]
+            .median().sort_values().index
+        )
+        
+    ax = sns.barplot(
+        data=data,
+        x=x,
+        y=y,
+        hue=hue_feature,
+        log_scale=log_scale,
+        order=order
+    )
+    if x_label:
+        ax.set_xlabel(x_label)
+    if y_label:
+        ax.set_ylabel(y_label)
+
+    ax.set_title(title)
+    fig = ax.get_figure()
+    
+    if len(figsize) == 2:
+        fig.set_size_inches(*figsize)
+    
+    if xrotation:
+        ax.tick_params(axis='x', labelrotation=xrotation)
+    
+    fig.tight_layout()
+    
+    return fig
+
+
 def plot_boxplot(
     data:pd.DataFrame, 
     numeric_feature:str,
