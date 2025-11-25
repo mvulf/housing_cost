@@ -1,4 +1,4 @@
-# Housing forecasting model for real estate agencies (housing_cost)
+# Housing forecasting model for real estate agencies (housing-cost-ml-prediction)
 
 Real estate agency faced with a problem - realtors spend too much time sorting ads and search for profitable offers. 
 Therefore, the speed of their reaction and the quality of analysis are not up to the level of competitors. 
